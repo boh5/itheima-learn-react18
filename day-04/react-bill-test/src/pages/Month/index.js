@@ -5,14 +5,16 @@ import classNames from "classnames"
 import dayjs from "dayjs"
 import {useSelector} from "react-redux"
 import _ from "lodash"
+import DayBill from "@/pages/Month/components/DayBill"
 
-const DATE_FORMAT = 'YYYY-MM'
+const MONTH_DATE_FORMAT = 'YYYY-MM'
+const DAY_DATE_FORMAT = 'YYYY-MM-DD'
 
 const Month = () => {
   // 按月做数据分组
   const billList = useSelector(state => state.bill.billList)
   const monthGroup = useMemo(() => {
-    return _.groupBy(billList, (item) => dayjs(item.date).format(DATE_FORMAT))
+    return _.groupBy(billList, (item) => dayjs(item.date).format(MONTH_DATE_FORMAT))
   }, [billList]);
 
   // 控制弹框的打开和关闭
@@ -36,16 +38,24 @@ const Month = () => {
 
   // 初始化的时候，把当前月的统计数据显示出来
   useEffect(() => {
-    const monthList = monthGroup[dayjs().format(DATE_FORMAT)]
-    setCurrentMonthList(monthList || [])
+    setCurrentMonthList(monthGroup[dayjs().format(MONTH_DATE_FORMAT)] || [])
   }, [monthGroup]);
 
   // 确认回调
   const onConfirm = (date) => {
     setCurrentDate(date)
-    const monthList = monthGroup[dayjs(date).format(DATE_FORMAT)]
-    setCurrentMonthList(monthList || [])
+    setCurrentMonthList(monthGroup[dayjs(date).format(MONTH_DATE_FORMAT)] || [])
   }
+
+  // 当前月按日分组
+  const dayGroup = useMemo(() => {
+    const groupData = _.groupBy(currentMonthList, (item) => dayjs(item.date).format(DAY_DATE_FORMAT))
+    const keys = Object.keys(groupData).sort()
+    return {
+      groupData,
+      keys
+    }
+  }, [currentMonthList]);
 
   return (
     <div className="monthlyBill">
@@ -57,7 +67,7 @@ const Month = () => {
           {/* 时间切换区域 */}
           <div className="date" onClick={() => setDateVisible(true)}>
             <span className="text">
-              {dayjs(currentDate).format(DATE_FORMAT)}月账单
+              {dayjs(currentDate).format(MONTH_DATE_FORMAT)}月账单
             </span>
             <span className={classNames('arrow', dateVisible && 'expand')}></span>
           </div>
@@ -88,6 +98,10 @@ const Month = () => {
             max={new Date()}
           />
         </div>
+        {/* 单日列表统计 */}
+        {
+          dayGroup.keys.map(key => <DayBill key={key} date={key} billList={dayGroup.groupData[key]} />)
+        }
       </div>
     </div>
   )
