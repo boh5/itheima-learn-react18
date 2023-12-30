@@ -1,12 +1,17 @@
-import { Button, DatePicker, Input, NavBar } from 'antd-mobile'
+import {Button, DatePicker, Input, NavBar} from 'antd-mobile'
 import Icon from '@/components/Icon'
 import './index.scss'
 import classNames from 'classnames'
-import { billListData } from '@/contants'
-import { useNavigate } from 'react-router-dom'
+import {billListData} from '@/contants'
+import {useNavigate} from 'react-router-dom'
+import {useState} from "react"
 
 const New = () => {
   const navigate = useNavigate()
+
+  // 1. 控制收入支出的状态
+  const [billType, setBillType] = useState('pay')  // pay, income
+
   return (
     <div className="keepAccounts">
       <NavBar className="nav" onBack={() => navigate(-1)}>
@@ -17,13 +22,15 @@ const New = () => {
         <div className="kaType">
           <Button
             shape="rounded"
-            className={classNames('selected')}
+            className={classNames(billType === 'pay' ? 'selected' : '')}
+            onClick={() => setBillType('pay')}
           >
             支出
           </Button>
           <Button
-            className={classNames('')}
+            className={classNames(billType === 'income' ? 'selected' : '')}
             shape="rounded"
+            onClick={() => setBillType('income')}
           >
             收入
           </Button>
@@ -53,7 +60,7 @@ const New = () => {
       </div>
 
       <div className="kaTypeList">
-        {billListData['pay'].map(item => {
+        {billListData[billType].map(item => {
           return (
             <div className="kaType" key={item.type}>
               <div className="title">{item.name}</div>
