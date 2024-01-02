@@ -1,12 +1,13 @@
 import {Breadcrumb, Button, Card, Form, Input, message, Radio, Select, Space, Upload} from 'antd'
-import {Link} from 'react-router-dom'
+import {Link, useSearchParams} from 'react-router-dom'
 import './index.scss'
 import ReactQuill from "react-quill"
 import 'react-quill/dist/quill.snow.css'
-import {useState} from "react"
-import {createArticleAPI} from "@/apis/article"
+import {useEffect, useState} from "react"
+import {createArticleAPI, getArticleByIdAPI, updateArticleAPI} from "@/apis/article"
 import {PlusOutlined} from "@ant-design/icons"
 import {useChannelList} from "@/hooks/useChannelList"
+import article from "@/pages/Article"
 
 const {Option} = Select
 
@@ -26,11 +27,24 @@ const Publish = () => {
       content,
       cover: {
         type: imageType,
-        images: imageList.map(item => item.response.data.url)
+        images: imageList.map(item => {
+          if (item.response) {
+            // 只有新增才能按这个逻辑
+            return item.response.data.url
+          } else {
+            return item.url
+          }
+        })
       },
       channel_id
     }
-    createArticleAPI(reqData)
+    if (articleId) {
+      // 编辑
+      updateArticleAPI({...reqData, id: articleId})
+    } else {
+      // 新增
+      createArticleAPI(reqData)
+    }
   }
 
   // 上传图片回调
@@ -45,13 +59,40 @@ const Publish = () => {
     setImageType(e.target.value)
   }
 
+  // 回填数据
+  const [searchParams] = useSearchParams()
+  const articleId = searchParams.get('id')
+  // 获取实例
+  const [form] = Form.useForm()
+  useEffect(() => {
+    async function getArticleDetail() {
+      const res = await getArticleByIdAPI(articleId)
+      const data = res.data
+      const {cover} = data
+      form.setFieldsValue({
+        ...data,
+        type: cover.type,
+      })
+      // 为什么现在的写法无法回填封面？
+      // 数据结构不一样
+      setImageType(cover.type)
+      setImageList(cover.images.map(url => {
+        return {url}
+      }))
+    }
+    // 只有有 id 的时候才调用
+    if (articleId) {
+      getArticleDetail()
+    }
+  }, [articleId, form]);
+
   return (
     <div className="publish">
       <Card
         title={
           <Breadcrumb items={[
             {title: <Link to={'/'}>首页</Link>},
-            {title: '发布文章'},
+            {title: `${articleId ? '编辑' : '发布'}文章`},
           ]}
           />
         }
@@ -61,6 +102,7 @@ const Publish = () => {
           wrapperCol={{span: 16}}
           initialValues={{type: 0}}
           onFinish={onFinish}
+          form={form}
         >
           <Form.Item
             label="标题"
@@ -93,6 +135,7 @@ const Publish = () => {
               action='http://geek.itheima.net/v1_0/upload'
               onChange={onChange}
               maxCount={imageType}
+              fileList={imageList}
             >
               <div style={{marginTop: 8}}>
                 <PlusOutlined />
