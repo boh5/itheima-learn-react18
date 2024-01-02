@@ -18,13 +18,15 @@
     "react-redux": "^9.0.4",
     "react-router-dom": "^6.21.1",
     "react-scripts": "5.0.1",
+    "source-map-explorer": "^2.5.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "craco start",
     "build": "craco build",
     "test": "craco test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "analyze": "source-map-explorer 'build/static/js/*.js'"
   },
   "eslintConfig": {
     "extends": [
@@ -45,7 +47,7 @@
     ]
   },
   "devDependencies": {
-    "craco": "^0.0.3",
+    "@craco/craco": "^7.1.0",
     "sass": "^1.69.6"
   }
 }

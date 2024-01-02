@@ -1,18 +1,19 @@
-import {Link} from 'react-router-dom'
-import {Breadcrumb, Button, Card, DatePicker, Form, Radio, Select, Space, Table, Tag} from 'antd'
+import {Link, useNavigate} from 'react-router-dom'
+import {Breadcrumb, Button, Card, DatePicker, Form, Popconfirm, Radio, Select, Space, Table, Tag} from 'antd'
 // 引入时间选择器汉化包
 import locale from 'antd/es/date-picker/locale/zh_CN'
 import {DeleteOutlined, EditOutlined} from '@ant-design/icons'
 import img404 from '@/assets/error.png'
 import {useChannelList} from "@/hooks/useChannelList"
 import {useEffect, useState} from "react"
-import {getArticleListAPI} from "@/apis/article"
+import {delArticleAPI, getArticleListAPI} from "@/apis/article"
 
 const {Option} = Select
 const {RangePicker} = DatePicker
 
 const Article = () => {
   const {channelList} = useChannelList()
+  const navigate = useNavigate()
 
   // 定义 status 枚举
   const status = {
@@ -62,30 +63,83 @@ const Article = () => {
       render: data => {
         return (
           <Space size="middle">
-            <Button type="primary" shape="circle" icon={<EditOutlined />} />
-            <Button
-              type="primary"
-              danger
-              shape="circle"
-              icon={<DeleteOutlined />}
-            />
+            <Button type="primary" shape="circle" icon={<EditOutlined />}
+                    onClick={() => navigate(`/publish?id=${data.id}`)}/>
+            <Popconfirm
+              placement="top"
+              title="删除文章"
+              description="确认要删除当前文章吗"
+              okText="Yes"
+              cancelText="No"
+              onConfirm={() => onDelConfirm(data)}
+            >
+              <Button
+                type="primary"
+                danger
+                shape="circle"
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
           </Space>
         )
       }
     }
   ]
 
+  // 筛选功能
+  // 1. 准备参数
+  const [reqData, setReqData] = useState({
+    status: '',
+    channel_id: '',
+    begin_pubdate: '',
+    end_pubdate: '',
+    page: 1,
+    per_page: 4
+  })
+
+  // 2. 获取筛选数据
+  const onFinish = (formValue) => {
+    // 3. 把表单数据放到参数中
+    setReqData({
+      ...reqData,
+      channel_id: formValue.channel_id,
+      status: formValue.status,
+      begin_pubdate: formValue.date[0].format('YYYY-MM-DD'),
+      end_pubdate: formValue.date[1].format('YYYY-MM-DD')
+    })
+  }
+
+  // 4. 重新拉取文章列表 + 渲染 table 逻辑（复用）
+  // 由 reqData 依赖项变化，重复执行 useEffect
+
+  // 分页
+  const onPageChange = (page) => {
+    setReqData({
+      ...reqData,
+      page: page.current
+    })
+  }
+
   // 获取文章列表
   const [articleList, setArticleList] = useState([])
   const [articleCount, setArticleCount] = useState(0)
   useEffect(() => {
     async function getList() {
-      const res = await getArticleListAPI()
+      const res = await getArticleListAPI(reqData)
       setArticleList(res.data.results)
       setArticleCount(res.data.total_count)
     }
+
     getList()
-  }, []);
+  }, [reqData])
+
+  // 删除
+  const onDelConfirm = async (data) => {
+    await delArticleAPI(data['id'])
+    setReqData({
+      ...reqData
+    })
+  }
 
   return (
     <div>
@@ -98,7 +152,7 @@ const Article = () => {
         }
         style={{marginBottom: 20}}
       >
-        <Form initialValues={{status: ''}}>
+        <Form initialValues={{status: ''}} onFinish={onFinish}>
           <Form.Item label="状态" name="status">
             <Radio.Group>
               <Radio value={''}>全部</Radio>
@@ -110,7 +164,6 @@ const Article = () => {
           <Form.Item label="频道" name="channel_id">
             <Select
               placeholder="请选择文章频道"
-              defaultValue="lucy"
               style={{width: 120}}
             >
               {channelList.map(item => <Option key={item.id} value={item.id}>{item.name}</Option>)}
@@ -130,7 +183,16 @@ const Article = () => {
         </Form>
       </Card>
       <Card title={`根据筛选条件共查询到 ${articleCount} 条结果：`}>
-        <Table rowKey="id" columns={columns} dataSource={articleList} />
+        <Table
+          rowKey="id"
+          columns={columns}
+          pagination={{
+            total: articleCount,
+            pageSize: reqData.per_page
+          }}
+          onChange={onPageChange}
+          dataSource={articleList}
+        />
       </Card>
     </div>
   )
